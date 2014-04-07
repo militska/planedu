@@ -1,0 +1,196 @@
+<?php
+function planedu_schema() {
+    
+  $schema['planedu_disc'] = array(
+    'module' => 'planedu',
+    'description' => t('Учебный план.Дисциплины'),
+    'fields' => array(
+      'id' => array(
+        'description' => t('ид'),
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      
+      'indxdisc' => array(
+        'description' => 'индекс',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '20',
+      ),  
+         
+    'parenttid' => array(
+        'description' => 'специальность',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),  
+        
+      
+      'disc' => array(
+        'description' => 'дисциплина',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '255',
+      ),  
+       
+      'types' => array(
+        'description' => 'Тип сдачи',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '20',
+      ), 
+      
+           
+      'parentnid' => array(
+        'description' => 'РУП',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),  
+      
+      
+    'maxedu' => array(
+        'description' => 'часы',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),   
+      
+    'sam' => array(
+        'description' => 'часы',
+        'type' => 'int',
+        'not null' => TRUE,
+      ), 
+    
+    'summa' => array(
+        'description' => 'часы',
+        'type' => 'int',
+        'not null' => TRUE,
+      ), 
+      
+    'lect' => array(
+        'description' => 'часы',
+        'type' => 'int',
+        'not null' => TRUE,
+      ), 
+      
+     'lab' => array(
+        'description' => 'часы',
+        'type' => 'int',
+        'not null' => TRUE,
+      ), 
+       
+        
+    ),    
+    'primary key' => array('id'),
+  );
+  
+  
+  $schema['planedu_rup'] = array(
+    'module' => 'planedu',
+    'description' => t('Учебный план.РУП'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('ид'),
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      
+      'parentnid' => array(
+        'description' => 'Специальность',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '255',
+      ),  
+       
+      'title' => array(
+        'description' => 'Имя плана',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '20',
+      ), 
+      
+           
+      'year' => array(
+        'description' => 'год',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),      
+      
+       
+        
+    ),    
+    'primary key' => array('nid'),
+  );
+  
+
+ $schema['planedu_umr'] = array(
+    'module' => 'planedu',
+    'description' => t('Учебный план.УМР'),
+    'fields' => array(
+   
+      'nid' => array(
+        'description' => t('ид'),
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      
+      'parentnid' => array(
+        'description' => 'План',
+        'type' => 'int',
+        'not null' => TRUE,
+      ), 
+      
+    
+     'title' => array(
+        'description' => 'Название',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '20',
+      ), 
+      
+      
+      'disc' => array(
+        'description' => 'Дисциплина',
+        'type' => 'int',
+        'not null' => TRUE,
+      ), 
+      
+    'typeumr' => array(
+        'description' => 'тип',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),   
+       
+      'dev' => array(
+        'description' => 'Разработчик',
+        'type' => 'int',
+        'not null' => TRUE,
+        
+      ), 
+      
+       
+
+        
+    ),    
+    'primary key' => array('nid'),
+  );
+  
+
+  return $schema;
+}  
+
+
+
+
+
+
+
+
+
+
+    
+      /*
+function planedu_uninstall() {
+  
+  drupal_unistall_schema('planedu');
+
+}
+*/

@@ -1,0 +1,7 @@
+name = "planedu"
+core = "7.x"
+description = "Учебный план"
+files[] = planedu.module
+files[] = planedu.install
+files[] = planedu-rup.tpl.php
+files[] = planedu-umr.tpl.php

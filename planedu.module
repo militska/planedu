@@ -1,0 +1,1127 @@
+<?php
+
+function planedu_permission() {
+  return array(
+    'planedu access' => array(
+      'title' => 'Доступ к работе с учебными планами',
+    ),
+  );
+}
+
+
+function planedu_access() {
+
+
+    if (user_access('planedu access')) return TRUE;
+
+}
+
+
+function planedu_node_info() {
+
+  return array(
+    'umr' => array(
+      'name' => 'Учебно - методическая разработка',
+      'base' => 'planedu',
+      'has_title' => TRUE,
+      'has_body' => TRUE,
+    ),
+
+    'planedu' => array(
+      'name' => 'Учебный план специальности',
+      'base' => 'planedu',
+      'has_title' => TRUE,
+      'has_body' => TRUE,
+    ),
+  );
+
+}
+
+function planedu_menu() {
+
+  $items['node/add/umr/%'] = array(
+		'title' => 'Создать ноду',
+		'page callback' => 'planedu2_form',
+    'access callback' => 'planedu_access',
+    'page arguments' => array(3),
+
+    'type' => MENU_CALLBACK,
+	);
+
+	$items['newdisc'] = array(
+		'title' => 'Учебный план',
+		'page callback' => 'drupal_get_form',
+    'page arguments' => array('planedu_newdisc_form',1),
+
+    'type' => MENU_CALLBACK,
+	);
+  
+  
+  	$items['moredev/%'] = array(
+		'title' => 'Нужно больше разработчиков',
+		'page callback' => 'drupal_get_form',
+    'page arguments' => array('planedu_moredev_form',1),
+    'access callback' => 'planedu_access',
+    'type' => MENU_CALLBACK,
+	);
+  
+  $items['moredev2/%'] = array(
+		'title' => 'Нужно больше разработчиков',
+		'page callback' => 'drupal_get_form',
+    'page arguments' => array('planedu_moredev2_form',1),
+    'access callback' => 'planedu_access',
+    'type' => MENU_CALLBACK,
+	);
+  
+  
+
+
+ 	$items['node/%node/planedu'] = array(
+		'title' => 'Учебный план',
+		'page callback' => 'planedu_managerdisc',
+    'access callback' => 'planedu_access',
+    'page arguments' => array(1),
+
+    'type' => MENU_LOCAL_TASK,
+	);
+
+  $items['node/%node/info/%'] = array(
+		'title' => 'Дисциплина',
+		'page callback' => 'planedu_info_disc',
+       'page arguments' => array(1,3),
+		'access arguments' => array(1),
+  'access callback' => 'planedu_access',
+    'type' => MENU_CALLBACK,
+	);
+  
+  $items['node/%node/info/%/edit'] = array(
+		'title' => 'Редактирование дисциплины',
+		'page callback' => 'drupal_get_form',
+    'page arguments' => array('planedu_disced_form',1,3),
+		'access arguments' => array(1),
+  'access callback' => 'planedu_access',
+    'type' => MENU_CALLBACK,
+	);
+
+ $items['dev/autocomplete'] = array(
+		'title' => 'Autocomplete for dev',
+		'page callback' => '_dev_autocomplete',
+		 'access callback' => 'planedu_access',
+		'type' => MENU_CALLBACK
+    );
+
+
+ $items['disc/autocomplete'] = array(
+		'title' => 'Autocomplete for disc',
+		'page callback' => '_disc_autocomplete',
+    'page argumets' => array(2),
+		 'access callback' => 'planedu_access',
+		'type' => MENU_CALLBACK
+    );
+
+
+ 	$items['delerec/%/%'] = array(
+		'title' => 'Удалить запись',
+		'page callback' => 'planedu_delerec',
+      'access callback' => 'planedu_access',
+    'page arguments' => array(1,2),
+		'access arguments' => array(1),
+    'type' => MENU_CALLBACK,
+	);
+
+  $items['admin/config/system/planedu'] = array(
+    'title' => 'Планирование всякого учебного',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('planedu_settings_form'),
+    'access arguments' => array('administer studentedu'),
+  );
+    return $items;
+ }
+
+function planedu_moredev2_form($form, &$form_state, $nid) {
+  
+ $form['wrapper'] = array(
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  
+  $form['wrapper']['number1'] = array(
+    '#type' => 'textfield',
+    '#size' => 3,
+    '#suffix' => '+',
+    '#default_value' => $nid,
+  );
+  $form['wrapper']['number2'] = array(
+    '#type' => 'textfield',
+    '#size' => 3,
+    '#suffix' => '= ',
+  );
+  $form['wrapper']['answer'] = array(
+    '#prefix' => '<div id="answer">',
+    '#type' => 'textfield',
+    '#suffix' => '</div>',
+    '#markup' => '?',
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Посчитать',
+    '#ajax' => array(
+      'callback' => 'simplecalc2_callback',
+      'wrapper' => 'answer',
+      'method' => 'html',
+    ),
+  );
+
+
+return $form;  
+}
+
+function simplecalc2_callback($form, $form_state) {
+  drupal_set_message(print_r($form_state['values']['answer'], TRUE));
+  
+  $_SESSION['v'] = $_SESSION['v'].$form_state['values']['number2'];
+  
+  return strval($form_state['values']['number2'].$_SESSION['v']);
+}
+
+
+function simplecalc_callback($form, $form_state) {
+$_SESSION['md'] = $_SESSION['md'].$form_state['values']['dev'];
+  return strval($form_state['values']['dev'].$_SESSION['md']);
+    
+}
+
+function planedu_settings_form($form, &$form_state) {
+    $allstruct = array();
+    $vocabularies = taxonomy_get_vocabularies();
+    foreach($vocabularies as $vid => $vocabulary){
+      $allstruct[$vocabulary->vid] = $vocabulary->name;
+    }
+
+		$form['planedu_cycles'] = array(
+      '#type' => 'select',
+			'#title' => 'Образовательно-предметные циклы',
+			'#options' => $allstruct,
+			'#default_value' => variable_get('planedu_cycles', '0'),
+		);
+
+    $form['planedu_type_umr'] = array(
+      '#type' => 'select',
+			'#title' => 'Критерии учебно-методический разработок',
+			'#options' => $allstruct,
+			'#default_value' => variable_get('planedu_type_umr', '0'),
+		);
+
+    $voc_treb = taxonomy_get_tree(variable_get('planedu_type_umr'));
+
+    foreach($voc_treb as $rec){
+      $treb[$rec->tid] = $rec->name;
+    }
+
+
+    $form['planedu_trebimp'] = array(
+      '#type' => 'checkboxes',
+			'#title' => 'Важные критерии',
+			'#options' => $treb,
+			'#default_value' => variable_get('planedu_trebimp', '0'),
+		);
+
+
+
+
+  return system_settings_form($form);
+}
+
+
+
+
+function planedu_delerec($id, $nid) {
+ global $base_url;
+
+  db_delete('planedu_disc')
+    ->condition('id', $id)
+    ->execute();
+
+    $my_url=$base_url."/node/".$nid;
+
+    header("Location: $my_url");
+
+}
+
+function planedu_managerdisc($node) {
+
+  global  $base_url;
+
+  $header = array(
+    array('data' => 'Название'),
+    array('data' => 'Год'),
+  );
+
+   $disc = db_select('planedu_rup', 'pd')
+      ->condition('parentnid', $node->nid)
+      ->fields('pd', array('nid', 'year', 'title'))
+      ->execute();
+
+  foreach ($disc as $rec) {
+
+    $rows[]= array(
+        $rec->title,
+        $rec -> year,
+        "<a href='".$base_url."/node/".$rec->nid."/info'>
+        Подробнее </a>",
+
+    );
+  }
+
+  $output .= theme('table', array('header' => $header, 'rows' => $rows));
+
+
+ return $output;
+
+}
+
+
+
+function planedu_newdisc_form($form, &$form_state, $nid) {
+#  drupal_set_message(print_r(node_load($nid)->parentnid));
+
+  $par = db_select('planedu_rup', 'pr')
+    ->fields('pr', array('parentnid'))
+    ->condition('nid', $nid)
+
+    ->execute()
+    ->FetchField();
+  $form['nid'] = array(
+    '#type' => 'hidden',
+    '#title' => 'нид',
+    '#default_value' =>$nid,
+  );
+
+  $form['spec'] = array(
+    '#type' => 'hidden',
+     '#title' => 'специальность',
+    '#default_value' => $par,
+  );
+
+ $cycles= taxonomy_get_tree(variable_get('planedu_cycles'));
+
+ $list_cycles = array();
+
+ foreach ($cycles as $record) {
+		$list_cycles[$record->tid] = $record->name;
+
+	}
+
+  $form['cycle'] = array(
+    '#type' => 'select',
+    '#options' =>$list_cycles,
+  );
+
+  $form['list_disc'] = array(
+    '#type' => 'textarea',
+    '#title' => 'Список дисциплин',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Обновить данные о дисциплинах',
+  );
+
+  return $form;
+}
+
+
+
+function planedu_newdisc_form_submit($form, &$form_state) {
+  $base_url;
+
+  $list_disc = explode("\n", $form_state['values']['list_disc']);
+  $adisc = array();
+
+
+  $disc2 =  db_select('planedu_disc', 'pd')
+        ->fields('pd', array('id','disc','types','parentnid'))
+        ->condition('parentnid', $form_state['values']['nid'])
+        ->execute();
+
+  $aroldy = array();
+  foreach ($disc2 as $record) {
+       $aroldy[$record->id] = $record -> disc."/".$record -> parentnid;
+  }
+
+
+  foreach ($list_disc as $rec) {
+    $adisc=explode(";", $rec);
+
+    $a4 = str_replace('б', 6, $adisc[4]);
+    $a5 = str_replace('б', 6, $adisc[5]);
+    $a6 = str_replace('б', 6, $adisc[6]);
+    $a7 = str_replace('б', 6, $adisc[7]);
+
+    if (in_array($adisc[1]."/".$adisc[2], $aroldy)) {
+
+       drupal_set_message("Дисциплина '".$adisc[1]."' с аттестацией '".$adisc[2]."' была добавлена в учебный план специальности раннее");
+    }
+
+  else {
+
+  # drupal_set_message($form_state['values']['cycle']);
+
+  db_insert('planedu_disc')
+      ->fields(array(
+        'indxdisc' => $adisc[0],
+        'disc' => $adisc[1],
+        'types' => $adisc[2],
+        'parenttid' => $form_state['values']['cycle'],
+        'parentnid' => $form_state['values']['nid'],
+        'maxedu' => $adisc[3],
+        'sam' => $a4,
+        'summa' => $a5,
+        'lect' => $a6,
+        'lab' => $a7,
+    ))
+  ->execute();
+
+    }
+  }
+}
+
+
+function planedu_info_disc($node, $id) {
+  global $base_url;
+
+  $breadcrumbs[] = l('Главная', null);
+  $breadcrumbs[] = l('Специальность', 'node/'.node_load($nid)->parentnid);
+  $breadcrumbs[] = l('Учебные планы', 'node/'.node_load($nid)->parentnid.'/planedu');
+  $breadcrumbs[] = l($node->title, 'node/'.$node->nid);
+
+
+
+  drupal_set_breadcrumb($breadcrumbs);
+
+  drupal_set_message(print_r(drupal_get_path('module', 'planedu'),TRUE));
+
+
+  $infodisc =  db_select('planedu_disc', 'pd')
+      ->fields('pd', array('id', 'maxedu', 'sam', 'summa','lect',  'lab', 'indxdisc','parenttid', 'disc','parentnid'))
+      ->condition('id', $id)
+      ->execute();
+
+
+  $str = db_select('planedu_rup', 'pr')
+    -> fields('pr', array('parentnid'))
+    -> condition('nid', $node->nid)
+    -> execute()
+    -> fetchField();
+
+  $output .=  node_load($str) -> title;
+
+  $output .=  "<br><a href='".$base_url."/node/".$node->nid."'>
+        Назад</a><p><p>";
+
+  $output .=  "<br><a href='".$base_url."/node/".$node->nid."/info/".$id."/edit'>
+        Редактировать</a><p><p>";
+
+
+  $array_infodisc = array();
+
+  foreach ($infodisc as $rec) {
+
+    $otd = node_load($rec -> parentnid);
+
+    drupal_set_title("Учебный план по дисциплине ".$rec->disc);
+
+    $output .= "<br>Родительский - ".node_load($rec -> parentnid)->title." ".$otd2;
+
+    $output .= "<br>Максимальная учебная нагрузка - ".$rec -> maxedu." часов";
+    $output .= "<br>Самостоятельная работа ".$rec -> sam." часов";
+    $output .= "<br>Всего занятий ".$rec -> summa." часов";
+    $output .= "<br>Лекций ".$rec -> lect." часов";
+    $output .= "<br>Лаб. и практ. занятий, вкл. cеминары ".$rec -> lab." часов";
+    $disc = $rec->id;
+    $rup = $rec -> parentnid;
+  }
+
+
+  $header = array(
+
+    array('data' => 'Критерий'),
+    array('data' => 'Разработка'),
+    array('data' => 'Ещё  одно поле'),
+  );
+
+
+
+  foreach (taxonomy_get_tree(variable_get('planedu_type_umr')) as $rec) {
+
+
+
+    $umr = db_select('planedu_umr', 'pu')
+        ->fields('pu', array('nid'))
+        ->condition('parentnid', $node->nid)
+        ->condition('disc', $disc)
+        ->condition('typeumr', $rec->tid)
+        ->execute()
+        ->fetchfield();
+
+
+    if ($umr!= null) {
+
+     $umrtitle = node_load($umr) -> title;
+     $str = "<a href='".$base_url."/node/".$umr."'><img src='".$base_url."/".drupal_get_path('module', 'planedu')."/img/info.png'></a><p><p>";
+    }
+    else {
+
+      $umrtitle = '';
+      $str = "<align='center'><a href='".$base_url."/node/add/umr?disc=".$disc."&typeumr=".$rec->tid."&parentnid=".$rup."'>
+        <img src='".$base_url."/".drupal_get_path('module', 'planedu')."/img/add.png'></a><p><p></align>";
+    }
+
+
+    $rows[]= array(
+      $rec->name,
+      $str,
+      $umrtitle,
+
+    );
+  }
+
+
+
+
+   $output .= theme('table', array('header' => $header1, 'rows' => $rows1));
+  $output .= theme('table', array('header' => $header, 'rows' => $rows));
+
+ return $output;
+
+}
+
+
+function planedu2_form($node, &$form_state, $id) {
+
+    $form['title'] = array(
+      '#type' => 'textfield',
+       # '#default_value' => $node->title,
+      '#title' => $_SESSION["name"],
+    );
+
+    $form['typeumr'] = array(
+      '#type' => 'select',
+    #  '#default_value' => $node->typeumr,
+      '#title' => 'тип',
+  #    '#options' => $typeumr,
+    );
+
+    $form;
+
+
+}
+
+ function _dev_autocomplete($string) {
+  $matches = array();
+  $result = db_select('node', 'n')
+    ->fields('n', array('title'))
+    ->fields('n', array('nid'))
+    ->condition('type', 'teacheredu')
+    ->condition('title',  db_like($string). '%', 'LIKE')
+    ->execute();
+  foreach ($result as $row) {
+    $matches[$row->title.'|'.$row->nid] = check_plain($row->title);
+  }
+
+  drupal_json_output($matches);
+}
+
+
+
+ function _disc_autocomplete($string, $rup) {
+
+  $matches = array();
+
+  $result = db_select('planedu_disc', 'pd')
+    ->fields('pd', array('disc'))
+   # ->condition('parentnid', $_SESSION['rup'])
+    ->condition('disc',  db_like($string). '%', 'LIKE')
+
+    ->execute();
+  foreach ($result as $row) {
+    $matches[$row->disc] = check_plain($row->disc);
+  }
+
+  drupal_json_output($matches);
+}
+
+
+
+function planedu_form_devadd_submit($form, &$form_state) {
+
+  drupal_set_message('ввввввввввввввввввввввввввв');
+}
+
+function planedu_form($node, &$form_state) {
+
+
+  if ($node -> type == 'umr') {
+
+     if (!isset($node->title)) $node->title ='';
+     if (!isset($node->parentnid)) $node->parentnid =$_GET['parentnid'];
+     if (!isset($node->disc)) $node->disc = $_GET['disc'];
+     if (!isset($node->typeumr)) $node->typeumr = $_GET['typeumr'];
+    # if (!isset($node->dev)) $node->dev = '';
+    if (!isset($node->deadd2)) $node->deadd2 ='еееееееееее';
+
+    $typeumr = array();
+
+    foreach (taxonomy_get_tree(variable_get('planedu_type_umr')) as $rec) {
+      $typeumr[$rec->tid] = $rec->name;
+    }
+
+
+    $qRup = db_select('planedu_rup', 'pr')
+      ->fields('pr', array('nid', 'title'))
+      ->execute();
+
+    $rup = array();
+
+    foreach ($qRup as $rec) {
+      $rup[$rec->nid] = $rec -> title;
+    }
+
+    $teach = db_select('node', 'n')
+      ->fields('n', array('nid', 'title'))
+      ->condition('type', 'teacheredu')
+      ->execute();
+
+    $teachers = array();
+
+    foreach ($teach as $rec) {
+      $teachers[$rec->nid] = $rec->title;
+    }
+
+       $form['title'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $node->title,
+        '#title' => 'Название',
+      );
+
+      $form['typeumr'] = array(
+        '#type' => 'select',
+
+        '#default_value' => $node->typeumr,
+        '#title' => 'тип',
+        '#options' => $typeumr,
+      );
+
+      $form['parentnid'] = array(
+        '#type' => 'select',
+
+       '#default_value' => $node->parentnid,
+        '#title' => 'Родительский учебный план',
+        '#options' => $rup,
+      );
+
+
+
+   
+      
+
+      $form['dev_list'] = array(
+        '#type' => 'textarea',
+        '#title' => 'Разработчики',
+      # '#default_value' => $node->dev,
+      # '#options' => $teachers,
+          '#prefix' => '<div id="dev_list">',
+    '#suffix' => '</div>',
+      );
+
+      $form['dev'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Разработчик',
+      # '#default_value' => $node->dev,
+      # '#options' => $teachers,
+        '#autocomplete_path' => 'dev/autocomplete',
+      );
+      
+      
+$form['wrapper']['answer'] = array(
+    '#prefix' => '<div id="answer">',
+    '#suffix' => '</div>',
+    '#markup' => '?',
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Посчитать',
+    '#ajax' => array(
+      'callback' => 'simplecalc_callback',
+      'wrapper' => 'answer',
+      'method' => 'html',
+    ),
+    
+  );
+
+
+
+    $named = db_select('planedu_disc', 'pd')
+      ->fields('pd', array('disc'))
+      ->condition('id', $node->disc)
+      ->execute()
+      ->fetchfield();
+
+
+    $form['disc'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Дисциплина',
+      '#default_value' => $named,
+      '#autocomplete_path' => 'disc/autocomplete',
+    );
+
+}
+
+  if ($node -> type == 'planedu') {
+
+     if (!isset($node->title)) $node->title = '';
+     if (!isset($node->parentnid)) $node->parentnid = '';
+     if (!isset($node->year)) $node->year = '';
+     if (!isset($node->body)) $node->body = '';
+
+
+    $strct = db_select('orgstruct', 'o')
+      ->fields('o', array('nid','parentnid','sname'))
+      ->execute();
+
+    $specar = array();
+
+    foreach ($strct as $rec) {
+      $specar[$rec -> nid] = $rec -> sname;
+    }
+
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Название',
+      '#description' => ' wwwww',
+      '#default_value' => $node->title,
+    );
+
+    $form['parentnid'] = array(
+      '#type' => 'select',
+      '#title' => 'Специальность',
+      '#options' => $specar,
+      '#description' => ' wwwww',
+      '#default_value' => $node->parentnid,
+    );
+
+
+    $form['year'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Год',
+      '#description' => ' wwwww',
+      '#default_value' => $node->year,
+    );
+
+  }
+
+  return $form;
+
+}
+
+function planedu_disced_form($form, &$form_state, $node, $id) {
+
+  $disc = db_select('planedu_disc', 'pd')
+    ->fields('pd', array('id', 'disc', 'sam', 'parentnid', 'indxdisc','maxedu','summa','lect','lab', 'types', 'parenttid'))
+    ->condition('id', $id)
+    ->execute();
+
+    foreach ($disc as $rec) {
+      $id = $rec -> id;
+      $indx = $rec -> indxdisc;
+      $parentnid = $rec -> parentnid;
+        $parenttid = $rec -> parenttid;  
+      $disc = $rec -> disc;
+      $types = $rec -> types;
+      $maxedu = $rec -> maxedu;
+      $sam = $rec -> sam;
+      $summa = $rec -> summa;
+      $lect = $rec -> lect;
+      $lab = $rec -> lab;
+      }
+      
+      
+  $form['id'] = array(
+    '#type' => 'hidden',
+    '#title' => 'код',
+    '#description' => ' wwwww',
+    '#default_value' => $id,
+    '#required' => TRUE,
+  );
+  
+  
+  $form['indxdisc'] = array(
+    '#type' => 'textfield',
+    '#title' => 'код',
+    '#description' => ' wwwww',
+    '#default_value' => $indx,
+    '#required' => TRUE,
+  );
+
+  $form['parentnid'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Верхний нид',
+    '#description' => ' wwwww',
+    '#default_value' => $parentnid,
+    '#required' => TRUE,
+  );
+  
+  $form['disc'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Название',
+    '#description' => ' wwwww',
+    '#default_value' => $disc,
+    '#required' => TRUE,
+  );
+
+  $form['types'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Название',
+    '#description' => ' wwwww',
+    '#default_value' => $types,
+    '#required' => TRUE,
+  );
+
+
+
+  $form['maxedu'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Максимальная нагрузка',
+        '#default_value' => $maxedu,
+    '#description' => ' wwwww',
+    '#required' => TRUE,
+  );
+  
+    $form['parenttid'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Образовательный цикл',
+        '#default_value' => $parenttid,
+    '#description' => ' wwwww',
+    '#required' => TRUE,
+  );
+
+
+  $form['sam'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Самостоятельная работа',
+    '#default_value' => $sam,
+    '#description' => ' wwwww',
+    '#required' => TRUE,
+  );
+
+
+  $form['summa'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Сумма',
+    '#default_value' => $summa,
+    '#description' => ' wwwww',
+    '#required' => TRUE,
+  );
+
+  $form['lect'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Лекции',
+     '#default_value' => $lect,
+    '#description' => ' wwwww',
+    '#required' => TRUE,
+  );
+
+  $form['lab'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Лаб. и практ. занятий, вкл. cеминары',
+     '#default_value' => $lab,
+    '#description' => ' wwwww',
+    '#required' => TRUE,
+  );
+
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'обновить данные',
+    '#required' => TRUE,
+  );
+
+
+return $form;
+
+}
+function planedu_disced_form_submit($form, &$form_state) {
+  
+   db_update('planedu_disc')
+      ->fields(array(
+   
+        'indxdisc' => $form_state['values']['indxdisc'],
+        'parenttid' => $form_state['values']['parenttid'],
+        'disc' => $form_state['values']['disc'],        
+        'types' => $form_state['values']['types'],
+        'parentnid' => $form_state['values']['parentnid'],
+        'maxedu' => $form_state['values']['maxedu'],
+        'sam' => $form_state['values']['sam'],
+         'summa' => $form_state['values']['summa'],
+        'lect' => $form_state['values']['lect'],   
+    
+         'lab' => $form_state['values']['lab'],       
+         
+          ))
+      ->condition('id',$form_state['values']['id'])
+      
+      ->execute();
+
+  
+}
+
+function planedu_insert($node) {
+  
+
+  
+  if ($node -> type == 'planedu') {
+
+    db_insert('planedu_rup')
+      ->fields(array(
+        'nid' => $node->nid,
+        'parentnid' => $node->parentnid,
+        'title' => $node->title,
+        'year' => $node->year,
+      ))
+      ->execute();
+
+  }
+
+
+  if ($node -> type == 'umr') {
+
+  unset($_SESSION['md']);
+
+    $iddis = db_select('planedu_disc', 'pd')
+      ->fields('pd', array('id'))
+      ->condition('disc', $node->disc)
+      ->condition('parentnid', $node->parentnid)
+      ->execute()
+      ->fetchfield();
+
+
+
+
+  $nidteach = explode('|', $node -> dev);
+     
+
+    db_insert('planedu_umr')
+      ->fields(array(
+        'nid' => $node->nid,
+        'parentnid' => $node->parentnid,
+        'title' => $node->title,
+        'typeumr' => $node->typeumr,
+        'disc' => $iddis,
+        'dev' => $nidteach[1],
+      ))
+      ->execute();
+
+  }
+
+}
+
+function planedu_update($node) {
+
+  if ($node -> type == 'planedu') {
+
+    db_update('planedu_rup')
+      ->fields(array(
+        'parentnid' => $node->parentnid,
+        'title' => $node->title,
+        'year' => $node->year,
+      ))
+      ->condition('nid', $node->nid)
+      ->execute();
+
+  }
+
+  if ($node -> type == 'umr') {
+    db_update('planedu_rup')
+      ->fields(array(
+          'nid' => $node->nid,
+          'parentnid' => $node->parentnid,
+          'title' => $node->title,
+          'typeumr' => $node->typeumr,
+          'disc' => $node->disc,
+          'dev' => $node->dev,
+            ))
+      ->condition('nid', $node->nid)
+      ->execute();
+
+   }
+
+}
+
+function planedu_delete($node) {
+
+  if ($node -> type == 'planedu') {
+    db_delete('planedu_rup')
+      ->condition('nid', $node->nid)
+      ->execute();
+  }
+
+  if ($node -> type == 'umr') {
+    db_delete('planedu_umr')
+      ->condition('nid', $node->nid)
+      ->execute();
+  }
+
+
+}
+
+
+function planedu_load($nodes) {
+
+
+foreach ($nodes as $rec) {
+  $type = $rec->type;
+}
+
+  if ($type == 'planedu') {
+    $result = db_query('SELECT * FROM {planedu_rup} WHERE nid IN (:nids)', array(':nids' => array_keys($nodes)));
+         foreach ($result as $record) {
+         $nodes[$record->nid]->title = $record->title;
+          $nodes[$record->nid]->parentnid  = $record->parentnid;
+          $nodes[$record->nid]->year	 = $record->year;
+     }
+     return $nodes;
+    }
+
+  if ($type == 'umr') {
+
+    $result = db_query('SELECT * FROM {planedu_umr} WHERE nid IN (:nids)', array(':nids' => array_keys($nodes)));
+         foreach ($result as $record) {
+         $nodes[$record->nid]->title = $record->title;
+          $nodes[$record->nid]->parentnid = $record->parentnid;
+          $nodes[$record->nid]->typeumr	 = $record->typeumr;
+          $nodes[$record->nid]->disc = $record->disc;
+          $nodes[$record->nid]->dev = $record->dev;
+     }
+    }
+}
+
+
+function planedu_node_view($node, $view_mode, $langcode) {
+   if ($view_mode == 'teaser') {
+     if ($node->type == 'orgstruct') {
+
+
+      $rup = db_select('planedu_rup','pr')
+          ->fields('pr', array('nid', 'title'))
+          ->condition('parentnid', $node->nid)
+          ->execute();
+        $rupar = array();
+
+        foreach ($rup as $rec) {     #берем все РУПы специальности
+          $rupar[$rec -> nid] = $rec -> title;
+
+               $summ_disc = db_select('planedu_disc','pd')   # Берем дисциплины  внутри этих РУПов, дабы посичтать
+                ->fields('pd', array('id', 'disc'))          # сколько их, и сколько критериев
+                ->condition('parentnid', $rec -> nid)
+                ->execute();
+
+                $rupar_list = $rupar_list.', '.$rec -> title;
+                $all_umr_struct = db_select('planedu_umr','pu')  # Вытаскиваем УМР которые у нас есть.
+                        ->fields('pu', array('nid', 'title'))
+                        ->condition('parentnid', $rec -> nid)
+                        ->execute();
+
+                          $all_umrar = array();
+                          foreach ($all_umr_struct as $rec) {
+                             $all_umrar[$rec -> nid] = $rec -> title;
+                             $info_umk.=$rec -> title;
+                          }
+
+                $list_disc = array();
+
+                foreach ($summ_disc as $rec) {
+                  $list_disc[$rec -> id] = $rec->disc;
+                }
+
+       $cc = $cc + count ($list_disc);
+       $allUMR = $allUMR + count($all_umrar);
+       }
+
+       $stat = ($allUMR / ($cc*count(variable_get('planedu_trebimp')))) * 100;
+
+         $info_umk .= 'На этой специальности  РУП(ы)'.$rupar_list.'<br/>';
+         $info_umk .= '<b>Статистика по учебному плану.</b> - '.substr($stat, 0, 4).' %<br>';
+         $info_umk .= 'Всего дисцплини в планах '.$cc;
+         $info_umk .= '</br>Всего критериев необходимо заполнить '.$cc*11;
+         $info_umk .= '</br>Уже заполнено '.$allUMR;
+
+           $info_umk .= '<br/><b>_________________</b>';
+        $node->content['stat_umr'] = array(
+          '#weight' => 10,
+          '#markup' => $info_umk."<br>",
+        );
+    }
+  }
+
+  if ($node -> type == 'planedu') {
+      if ($view_mode == 'teaser') {
+
+        $node->content['planedu_rup'] = array(
+          '#weight' => 10,
+          '#markup' => theme('planedu_rup', array('nid' => $node->nid)),
+        );
+      }
+
+      if ($view_mode == 'full') {
+        $node->content['planedu_rup'] = array(
+          '#weight' => 10,
+          '#markup' => theme('planedu_rup', array('nid' => $node->nid)),
+          '#suffix' => drupal_get_form('planedu_newdisc_form', $node->nid),
+        );
+      }
+      return $node;
+    }
+
+
+
+    if ($node -> type == 'umr') {
+      if ($view_mode == 'teaser') {
+
+        $node->content['planedu_umr'] = array(
+          '#weight' => 10,
+          '#markup' => theme('planedu_umr', array('nid' => $node->nid)),
+        );
+      }
+
+      if ($view_mode == 'full') {
+        $node->content['planedu_umr'] = array(
+          '#weight' => 10,
+          '#markup' => theme('planedu_umr', array('nid' => $node->nid)),
+        );
+      }
+      return $node;
+    }
+
+}
+
+
+function planedu_theme($existing, $type, $theme, $path) {
+
+    return array(
+      'planedu_rup' => array(
+        'template' => 'planedu-rup',
+          'variables' => array(
+              'nid'	=> null,
+          ),
+        ),
+
+      'planedu_umr' => array(
+        'template' => 'planedu-umr',
+          'variables' => array(
+              'nid'	=> null,
+          ),
+        ),
+
+      );
+
+}
